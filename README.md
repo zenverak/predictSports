@@ -51,7 +51,7 @@ I assign weights to each feature, and then apply those weights to each team's st
 for the data below the normalized weights are as shown. They are in the same order as the features are listed above.
 
 ```python
-r.weights = array([ 0.16666667,  0.05555556,  0.16666667,  0.11111111,  0.11111111,
+rater.weights = array([ 0.16666667,  0.05555556,  0.16666667,  0.11111111,  0.11111111,
         0.08333333,  0.11111111,  0.11111111,  0.08333333])
 ```
 
