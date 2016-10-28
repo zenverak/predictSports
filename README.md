@@ -46,7 +46,16 @@ Right now the main functionality here is to rate the various teams in a league. 
 * apf = away points for. Total points scored on the road
 * apa = away points allowed. Total number of points allowed on the road
 
-I assign weights to each feature, and then apply those weights to each team's stat and sum them. As of week 7 through the NFL season this is how the ranking shows.
+I assign weights to each feature, and then apply those weights to each team's stat and sum them. 
+
+for the data below the normalized weights are as shown. They are in the same order as the features are listed above.
+
+```python
+r.weights = array([ 0.16666667,  0.05555556,  0.16666667,  0.11111111,  0.11111111,
+        0.08333333,  0.11111111,  0.11111111,  0.08333333])
+```
+
+As of week 7 through the NFL season this is how the ranking shows.
 
 ```python
 rater.get_team_ranks(do_print=True)
@@ -54,38 +63,40 @@ rater.get_team_ranks(do_print=True)
 
 rank |team|rating
 -----|----|------
-1|NE|0.396387607626
-2|DAL|0.344677052322
-3|MIN|0.311528325874
-4|DEN|0.310645058168
-5|PHI|0.301167487215
-6|OAK|0.283635897615
-7|BUF|0.273283468478
-8|ATL|0.266490215905
-9|SEA|0.245654445684
-10|ARI|0.234369335938
-11|GB|0.213914001591
-12|PIT|0.212225265863
-13|KC|0.210619607373
-14|DET|0.20235043106
-15|WAS|0.201847451607
-16|SD|0.197070290522
-17|NYG|0.192614314753
-18|BAL|0.164524103496
-19|IND|0.154067571058
-20|TEN|0.151954292969
-21|CIN|0.132816685834
-22|LA|0.13217311859
-23|TB|0.127529006717
-24|HOU|0.111993472015
-25|MIA|0.109722409003
-26|NO|0.0820935156731
-27|CAR|0.0569624467174
-28|JAC|0.041280216755
-29|NYJ|0.0393224770004
-30|CHI|-0.00999466253563
-31|SF|-0.0306032074746
-32|CLE|-0.0766706857225
+1|NE|0.443810518313
+2|DAL|0.390343142008
+3|OAK|0.346582051451
+4|MIN|0.345147122584
+5|DEN|0.344312925307
+6|PHI|0.316843367555
+7|ATL|0.311870389095
+8|BUF|0.304397349859
+9|SEA|0.273673643146
+10|ARI|0.251441409868
+11|WAS|0.236930000592
+12|GB|0.234437297799
+13|PIT|0.232842380723
+14|KC|0.231325925482
+15|NYG|0.228209815785
+16|DET|0.223516147853
+17|SD|0.213899718826
+18|BAL|0.197050542191
+19|TEN|0.185179054471
+20|TB|0.175999617455
+21|IND|0.173286039333
+22|LA|0.166496834224
+23|CIN|0.153215758843
+24|HOU|0.124290130978
+25|MIA|0.117515608503
+26|NO|0.100680912951
+27|JAC|0.0621350195279
+28|NYJ|0.060286043093
+29|CAR|0.0584274959738
+30|CHI|-0.00480977387625
+31|SF|-0.0242733996519
+32|CLE|-0.0724112031824
+>>> 
+
 
 
 You can also see the output of where each team ranks on each feature
