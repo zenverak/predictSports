@@ -48,6 +48,9 @@ Right now the main functionality here is to rate the various teams in a league. 
 
 I assign weights to each feature, and then apply those weights to each team's stat and sum them. As of week 7 through the NFL season this is how the ranking shows.
 
+```python
+rater.get_team_ranks(do_print=True)
+```
 
 rank |team|rating
 -----|----|------
