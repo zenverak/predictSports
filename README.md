@@ -9,12 +9,29 @@ For the future I would like to add the following features
 * more sports leagues.
   * currently this only works with the NFL. However if I can find some API's similar to nflGame then I can get all of the data I need
 * neural netowrk capability so that it will be able to predict
+* ability to save the pandas representation of my ratings to csv
+* lint the code and add comments and argument descriptions
 
 
 If you run this right now, it will create an object called r which is the Rater class. I will probably be changing some of this around to be more accureate to the classes purpose once I get more work done.
 
 
-RATER
+#RATER
+
+a simple rater can look like this
+
+```python
+from LeagueRatings import Rater
+rater = Rater('nfl')
+```
+
+with just that code you will then have the ability to get the overall rankings with default features and weights, if you would like to modify the weights before the code runs, you can do the following.
+
+```python
+rater = Rater(start=False)
+rater.weights = new_weights #some list of weights
+```
+
 
 Right now the main functionality here is to rate the various teams in a league. Currently I am using 9 features
 
@@ -68,9 +85,9 @@ rank |team|rating
 
 
 You can also see the output of where each team ranks on each feature
-
-> r.print_table()
-
+```python
+r.print_table()
+```
 
 rank|op|hp|ap|pf|pa|hpf|hpa|apf|apa
 ---|---|---|---|---|---|---|---|---|---
