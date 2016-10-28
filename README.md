@@ -30,6 +30,7 @@ with just that code you will then have the ability to get the overall rankings w
 ```python
 rater = Rater(start=False)
 rater.weights = new_weights #some list of weights
+rater.get_ratings()
 ```
 
 
