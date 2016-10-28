@@ -295,45 +295,7 @@ class Rater(object):
 
 
 if __name__ == '__main__':
-##    games = get_games(2016, 7)
-##    teams = [t[0] for t in nflgame.teams if t[0] != 'STL']
-##    feature_id_short = ['op', 'hp', 'ap', 'pf', 'pa', 'hpf', 'hpa', 'apf', 'apa']
-##    feature_ids = ['overall performance based on wins', 'hp', 'ap', 'points for', 'points allowed', 'home points for', 'home points allowed', 'away points for', 'away points allowed']
-##    records =  get_records(teams, games)
-##    features = get_feature_sets(records)
-##    maxs = get_max(features)
-##    adjusted_features = apply_max(maxs, dc(features))
-##    weights = np.array([3., 1., 3., 2., 2., 1.5, 2., 2., 1.5])
-##    #weights = np.array([2., 1., 3., 2., 2., 1.5, 2., 2., 1.5])
-##    weights = weights / sum(weights)
-##    weighted_features = apply_weights(dc(adjusted_features), weights)
-##    split_up_features = split_features(adjusted_features)
-##    get_team_ranks(weighted_features)
-##    #feature_ranks = get_feature_ranks(adjusted_features, feature_ids )
-##    transposed_ranks, ranks = get_split_ranks(split_up_features, feature_ids)
-##    table = pd.DataFrame(transposed_ranks, columns=feature_id_short)
-##    table.index += 1
-##    print_table(transposed_ranks, feature_id_short)
     r = Rater('nfl')
-
-    
-    
-## [op, hp, ap, pf, pa, hpf, hpa, apf, apa]  
-##hpf = [r[2] for r in record if r[1] == 1]
-##print hpf
-
-
-
-
-##r1 = [0, 1, 24, 34]
-##r2 = [2, 0, 35, 28]
-##r3 = [2, 0, 45, 32]
-##r4 = [2, 1, 48, 33]
-##r5 = [2, 0, 23, 16]
-##r6 = [0, 0, 24, 26]
-##r7 = [0, 1, 30, 33]
-##
-##record = [r1, r2, r3, r4, r5, r6, r7]
 
 
 
