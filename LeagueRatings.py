@@ -307,7 +307,7 @@ class Rater(object):
         self.league = league.league_name
         self.league_feature_ids = {'nfl':['op', 'hp', 'ap', 'pf', 'pa', 'hpf', 'hpa', 'apf', 'apa'],
                                    'mlb':['op', 'hp', 'ap', 'rf', 'ra', 'hrf', 'hra', 'arf', 'ara']}
-        self.codes = [['', '', ''], ['', '', ''], ['', '', ''], [2, 'o','p'],[2, 'h', 'p'], [2, 'a', 'p'], [3, 'o', 'n'], [3, 'h', 'n'], [3, 'a', 'n']]
+        self.codes = [[0, 'o', 'p','s'], [0, 'p', 'h','s'], [0, 'a', 'p','s'], [2, 'o','p','pg'],[2, 'h', 'p', 'pg'], [2, 'a', 'p', 'pg'], [3, 'o', 'n', 'pg'], [3, 'h', 'n', 'pg'], [3, 'a', 'n', 'pg']]
         self.weights_list = {'nfl':np.array([1., 2., 3., 2., 2., 1.5, 2., 2., 1.5]),
                              'mlb':np.array([1., 2., 3., 2., 2., 1.5, 2., 2., 1.5])}
         self.feature_ids = self.league_feature_ids[self.league]
@@ -324,33 +324,14 @@ class Rater(object):
         self.overall_rank=[]
         if start:
             self.get_ratings()
-    
- 
-    def get_overall_performance(self, record):
-        ''' gets overall peformance in terms of total wins, home wins, and away wins'''
-        ## Records here are given in  the format of [win or loss, home or away]
-        ## the form is [2 for win, 0 for loss, 1 for tie, 1 for home and 0 for away]
-        overall_performance = 0
-        home_performance = 0
-        away_performance = 0
-
-        for game in record:
-            overall_performance += game[0] * 1.
-            if game[1] == 1:
-                home_performance += game[0] * 1.
-            else:
-                away_performance += game[0] * 1.
-        return overall_performance, home_performance, away_performance
 
 
-    def points(self, record,  codes, record_len, home_len, away_len):
-        if len(record[0]) == 5:
-            print record
-        
-        typ = codes[1]
-        index = codes[0]
+
+    def calculate_per_game_features(self, record,  code, record_len, home_len, away_len):
+        typ = code[1]
+        index = code[0]
         where = None
-        if codes[2] == 'p':
+        if code[2] == 'p':
             pm = 1.0
         else:
             pm = -1.0
@@ -362,33 +343,49 @@ class Rater(object):
         elif typ == 'a':
             div = away_len * pm
             where = 0
-        #print " codes are {0}. This makes pm {1} . where div is {2}".format(codes, pm, div)
         if where == None:
-            s = sum([r[index] * 1. for r in record]) / div
-
-            return s
+            return sum([r[index] * 1. for r in record]) / div
         else:
-            s = sum([r[index] * 1. for r in record if r[1] == where]) / div
-            return s
+            return sum([r[index] * 1. for r in record if r[1] == where]) / div
 
 
+    def calculate_season_features(self, record, code):
+        typ = code[1]
+        index = code[0]
+        where = None
+        if code[2] == 'p':
+            pm = 1.0
+        else:
+            pm = -1.0
+        if typ == 'h':
+            where = 1
+        elif typ == 'a':
+            where = 0
+        if where == None:
+            return sum([r[index] * pm for r in record])
+        else:
+            return sum([r[index] * pm for r in record if r[1] == where])
+        
+        
 
-    def get_points(self, record=None, codes=None, other=''):
+
+    def calculate_features(self, record=None, codes=None):
         '''Will get all of the points summed up and averages
 
             arguments:
                 record - the records for a team. Defaults to None
-                other  - undetermined at this time
+                codes  - codes used to determine how we calcluate a certain feature.
 
             returns:
                 all point related features calculated
                 
         '''
         if record == None:
-            record = self.record
+            record = self.records
         if codes == None:
             codes = self.codes
         tot_len = len(record) * 1.
+
         if tot_len == 0.0:
             tot_len = 1.0
         home_len = len([r for r in record if r[1] == 1]) * 1.
@@ -397,15 +394,13 @@ class Rater(object):
         away_len = len([r for r in record if r[1] == 0]) * 1.
         if away_len == 0.0:
             away_len = 1.
-##
-        other_features = []
-
-        for i in range(3, len(self.feature_ids)):
-            other_features.append(self.points(record, codes[i], tot_len, home_len, away_len))
-                       
-
-
-        return other_features
+        features = []
+        for i in range(0, len(self.feature_ids)):
+            if codes[i][3] == 'pg':
+                features.append(self.calculate_per_game_features(record, codes[i], tot_len, home_len, away_len))
+            else:
+                features.append(self.calculate_season_features(record, codes[i]))
+        return np.array(features)
 
 
     def get_max(self, features=None):
@@ -419,7 +414,6 @@ class Rater(object):
         if features == None:
             features = dc(self.features)
         sets = np.array([features[key] for key in features])
-        print sets
         maxs = []
         for i in range(0, len(sets[0])):
             maxs.append(max(abs(sets[:,i])))        
@@ -559,13 +553,8 @@ class Rater(object):
             records = self.records
         features = {key: [] for key in records}
         for team in records:
-            record = records[team]
-            others = self.get_points(record)
-            op, hp, ap =  self.get_overall_performance(record)
-            feats = [op, hp, ap]
-            for feat in others:
-                feats.append(feat)
-            features[team] = feats
+            record = records[team]            
+            features[team] = self.calculate_features(record)
         self.features = features
 
 
