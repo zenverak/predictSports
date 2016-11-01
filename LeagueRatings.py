@@ -179,18 +179,82 @@ class NFL(object):
         self.records = ''
         self.args = args
         self.get_teams()
+        self.codes = []
         self.weeks = args['week']
         self.year = args['year']
+        self.code_map ={'op':[0, 'o', 'p' ,'s'],
+                 'hp':[0, 'h', 'p', 's'],
+                 'ap':[0, 'a', 'p', 's'],
+                 'pf':[2, 'o', 'p','pg'],
+                 'pa':[3, 'o', 'n','pg'],
+                 'hpf':[2, 'h', 'p', 'pg'],
+                 'hpa':[3, 'h', 'n', 'pg'],
+                 'apf':[2, 'a', 'p', 'pg'],
+                 'apa':[3, 'a', 'n', 'pg'],
+                 'fd':[4, 'o', 'p', 'pg'],
+                 'hfd':[4, 'h', 'p', 'pg'],
+                 'afd':[4, 'a', 'p', 'pg'],
+                 'ty':[5, 'o', 'p', 'pg'],
+                 'hty':[5, 'h', 'p', 'pg'],
+                 'aty':[5, 'a', 'p', 'pg'],
+                 'py':[6, 'o', 'p', 'pg'],
+                 'hpy':[6, 'h', 'p', 'pg'],
+                 'apy':[6, 'a', 'p', 'pg'],
+                 'ry':[7, 'o', 'p', 'pg'],
+                 'hry':[7, 'h', 'p', 'pg'],
+                 'ary':[7, 'a', 'p', 'pg'],
+                 'pnt':[8, 'o', 'n', 'pg'],
+                 'hpnt':[8, 'h', 'n', 'pg'],
+                 'apnt':[8, 'a', 'n', 'pg'],
+                 'pnty':[9, 'o', 'n', 'pg'],
+                 'hpnty':[9, 'h', 'n', 'pg'],
+                 'apnty':[9, 'a', 'n', 'pg'],
+                 'to':[10, 'o', 'n', 'pg'],
+                 'hto':[10, 'h', 'n', 'pg'],
+                 'ato':[10, 'a', 'n', 'pg'],
+                 'fda':[11, 'o', 'n', 'pg'],
+                 'hfda':[11, 'h', 'n', 'pg'],
+                 'afda':[11, 'a', 'n', 'pg'],
+                 'tya':[12, 'o', 'n', 'pg'],
+                 'htya':[12, 'h', 'n', 'pg'],
+                 'atya':[12, 'a', 'n', 'pg'],
+                 'pya':[13, 'o', 'n', 'pg',],
+                 'hpya':[13, 'h', 'n', 'pg',],
+                 'apya':[13, 'a', 'n', 'pg',],
+                 'rya':[14, 'o', 'n', 'pg'],
+                 'hrya':[14, 'h', 'n', 'pg'],
+                 'arya':[14, 'a', 'n', 'pg'],
+                 'pnta':[15, 'o', 'p', 'pg'],
+                 'hpnta':[15, 'h', 'p', 'pg'],
+                 'apnta':[15, 'a', 'p', 'pg'],
+                 'pntya':[16, 'o', 'p', 'pg'],
+                 'hpntya':[16, 'h', 'p', 'pg'],
+                 'apntya':[16, 'a', 'p', 'pg'],
+                 'tog':[17, 'o', 'p', 'pg'],
+                 'htog':[17, 'h', 'p', 'pg'],
+                 'atog':[17, 'a', 'p', 'pg']}
         if self.args['year'] != '' and self.args['week'] != '':
             self.get_games()
             self.get_records()
 
 
-    def get_teams(self,):
+    def get_teams(self):
         ''' Gets the teams in the NFL '''
 
         self.teams = [t[0] for t in nflgame.teams if t[0] != 'STL']
 
+
+    def get_codes(self, feature_ids):
+        codes = []
+        for feature in feature_ids:
+            try:
+                codes.append(self.code_map[feature])
+            except:
+                print "that code is not one we know"
+        self.codes = codes
+        
+
+        
 
     
     def get_records(self, teams=None, games=None):
@@ -207,6 +271,8 @@ class NFL(object):
         for game in games:
             home_team = game.home
             away_team = game.away
+            home_stats = game.stats_home
+            away_stats = game.stats_away
             if home_team == 'JAX':
                 home_team = 'JAC'
             if away_team == 'JAX':
@@ -224,9 +290,11 @@ class NFL(object):
             else:
                 home_winloss = 1.
                 away_winloss = 1.
-            ## records in the form of [win/loss, home/away (1/0), pf, pa]
-            home_info = [home_winloss, 1, home_points, away_points]
-            away_info = [away_winloss, 0, away_points, home_points]
+            ## records in the form of [win/loss, home/away (1/0), pf, pa, fd, ty, py, ry, pnt, pty, to, ]
+            home_info = [home_winloss, 1, home_points, away_points, home_stats[0], home_stats[1], home_stats[2], home_stats[3], home_stats[4], home_stats[5], home_stats[6],
+                         away_stats[0], away_stats[1], away_stats[2] , away_stats[3], away_stats[4], away_stats[5], away_stats[5]]
+            away_info = [away_winloss, 0, away_points, home_points, away_stats[0], away_stats[1], away_stats[2] , away_stats[3], away_stats[4], away_stats[5], away_stats[5],
+                         home_stats[0], home_stats[1], home_stats[2], home_stats[3], home_stats[4], home_stats[5], home_stats[6]]
             records[home_team].append(home_info)
             records[away_team].append(away_info)
         self.records = records
@@ -286,18 +354,6 @@ class Leagues(object):
             self.league = NFL(self.args)
         elif self.league_name =='mlb':
             self.league = MLB(self.args)
-            
-
-
-
-    
-            
-
-
-
-
-
-
 
 
 class Rater(object):
@@ -307,7 +363,7 @@ class Rater(object):
         self.league = league.league_name
         self.league_feature_ids = {'nfl':['op', 'hp', 'ap', 'pf', 'pa', 'hpf', 'hpa', 'apf', 'apa'],
                                    'mlb':['op', 'hp', 'ap', 'rf', 'ra', 'hrf', 'hra', 'arf', 'ara']}
-        self.codes = [[0, 'o', 'p','s'], [0, 'p', 'h','s'], [0, 'a', 'p','s'], [2, 'o','p','pg'],[2, 'h', 'p', 'pg'], [2, 'a', 'p', 'pg'], [3, 'o', 'n', 'pg'], [3, 'h', 'n', 'pg'], [3, 'a', 'n', 'pg']]
+        self.codes = [[0, 'o', 'p','s'], [0, 'h', 'p','s'], [0, 'a', 'p','s'], [2, 'o','p','pg'],[2, 'h', 'p', 'pg'], [2, 'a', 'p', 'pg'], [3, 'o', 'n', 'pg'], [3, 'h', 'n', 'pg'], [3, 'a', 'n', 'pg']]
         self.weights_list = {'nfl':np.array([1., 2., 3., 2., 2., 1.5, 2., 2., 1.5]),
                              'mlb':np.array([1., 2., 3., 2., 2., 1.5, 2., 2., 1.5])}
         self.feature_ids = self.league_feature_ids[self.league]
