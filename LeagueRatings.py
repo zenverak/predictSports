@@ -307,8 +307,7 @@ class Rater(object):
         self.league = league.league_name
         self.league_feature_ids = {'nfl':['op', 'hp', 'ap', 'pf', 'pa', 'hpf', 'hpa', 'apf', 'apa'],
                                    'mlb':['op', 'hp', 'ap', 'rf', 'ra', 'hrf', 'hra', 'arf', 'ara']}
-        self.codes = ['','','','o', 'h', 'h', 'o', 'a', 'a']
-        self.indexes = [0, 0, 0, 2, 2, 3, 3, 2, 3]
+        self.codes = [['', '', ''], ['', '', ''], ['', '', ''], [2, 'o','p'],[2, 'h', 'p'], [2, 'a', 'p'], [3, 'o', 'n'], [3, 'h', 'n'], [3, 'a', 'n']]
         self.weights_list = {'nfl':np.array([1., 2., 3., 2., 2., 1.5, 2., 2., 1.5]),
                              'mlb':np.array([1., 2., 3., 2., 2., 1.5, 2., 2., 1.5])}
         self.feature_ids = self.league_feature_ids[self.league]
@@ -326,8 +325,7 @@ class Rater(object):
         if start:
             self.get_ratings()
     
-                    
-    
+ 
     def get_overall_performance(self, record):
         ''' gets overall peformance in terms of total wins, home wins, and away wins'''
         ## Records here are given in  the format of [win or loss, home or away]
@@ -345,24 +343,37 @@ class Rater(object):
         return overall_performance, home_performance, away_performance
 
 
-    def points(self, record,  index, typ, record_len, home_len, away_len):
+    def points(self, record,  codes, record_len, home_len, away_len):
+        if len(record[0]) == 5:
+            print record
+        
+        typ = codes[1]
+        index = codes[0]
         where = None
+        if codes[2] == 'p':
+            pm = 1.0
+        else:
+            pm = -1.0
         if typ == 'o':
-            div = record_len * 1.0
+            div = record_len * pm
         elif typ == 'h':
-            div = home_len * 1.
+            div = home_len * pm
             where = 1
         elif typ == 'a':
-            div = away_len * 1.
+            div = away_len * pm
             where = 0
-        if not where:
-            return sum([r[index] * 1. for r in record]) / div
+        #print " codes are {0}. This makes pm {1} . where div is {2}".format(codes, pm, div)
+        if where == None:
+            s = sum([r[index] * 1. for r in record]) / div
+
+            return s
         else:
-            return sum([r[index] * 1. for r in record if r[1] == where]) / div
+            s = sum([r[index] * 1. for r in record if r[1] == where]) / div
+            return s
 
 
 
-    def get_points(self, record=None, keys=None, indexes=None, other=''):
+    def get_points(self, record=None, codes=None, other=''):
         '''Will get all of the points summed up and averages
 
             arguments:
@@ -375,10 +386,8 @@ class Rater(object):
         '''
         if record == None:
             record = self.record
-        if keys == None:
-            keys = self.codes
-        if indexes == None:
-            indexes = self.indexes
+        if codes == None:
+            codes = self.codes
         tot_len = len(record) * 1.
         if tot_len == 0.0:
             tot_len = 1.0
@@ -389,22 +398,13 @@ class Rater(object):
         if away_len == 0.0:
             away_len = 1.
 ##
-##        other_features = []
-##
-##        for i in range(3, int(tot_len)):
-##            other_features.append(self.points(record, indexes[i], keys[i], tot_len, home_len, away_len))
+        other_features = []
+
+        for i in range(3, len(self.feature_ids)):
+            other_features.append(self.points(record, codes[i], tot_len, home_len, away_len))
                        
 
-        pf  =  sum([r[2] * 1. for r in record]) / tot_len
-        hpf =  sum([r[2] * 1. for r in record if r[1] == 1]) / home_len
-        hpa =  sum([r[3] * 1. for r in record if r[1] == 1]) * (-1. / home_len)
-        pa  =  sum([r[3] * 1. for r in record]) * -1. / tot_len
-        apf =  sum([r[2] * 1. for r in record if r[1] == 0]) / away_len
-        apa =  sum([r[3] * 1. for r in record if r[1] == 0]) * ( -1. / away_len)
-        other_features = [pf, hpf, apf, pa, hpa, apa]
-        rec_len = len(record[0])
-##        if rec_len > 4:
-##            for i in range
+
         return other_features
 
 
