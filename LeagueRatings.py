@@ -388,6 +388,12 @@ class Rater(object):
         away_len = len([r for r in record if r[1] == 0]) * 1.
         if away_len == 0.0:
             away_len = 1.
+##
+##        other_features = []
+##
+##        for i in range(3, int(tot_len)):
+##            other_features.append(self.points(record, indexes[i], keys[i], tot_len, home_len, away_len))
+                       
 
         pf  =  sum([r[2] * 1. for r in record]) / tot_len
         hpf =  sum([r[2] * 1. for r in record if r[1] == 1]) / home_len
@@ -397,7 +403,8 @@ class Rater(object):
         apa =  sum([r[3] * 1. for r in record if r[1] == 0]) * ( -1. / away_len)
         other_features = [pf, hpf, apf, pa, hpa, apa]
         rec_len = len(record[0])
-
+##        if rec_len > 4:
+##            for i in range
         return other_features
 
 
