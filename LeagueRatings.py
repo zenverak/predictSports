@@ -171,9 +171,34 @@ class NFL(object):
                 {'year':'',
                 'week':''}
 
+            feature_ids:
+                op = overall performance ( number of wins)
+                hp = home performance  ( number of wins at home)
+                ap = away performance  ( number of wins away)
+                pf = point for
+                pa = points alowed
+                hpf = home points for
+                hpa = home points allowed
+                apf = away points for
+                apa = away points allowed
+                **for rest of these add h in front for these features at home and a in front for these features away rush as fd becomes hfd for home first downs
+                fd = first downs
+                ty = total yards
+                py = passing yards
+                ry = rushing yards
+                pnt = number of penalties
+                pnty = penalty yards
+                to = turnovers
+                fda = first downs allowed
+                tya = total yards allowed
+                pya = passying yards allowed
+                rya = rushing yards allowed
+                pnta = penalty yards allowed ( ie penalties opposing team got)
+                pntya = penalty yards allowed ( or given by opponnent)
+                tog = turn over gained
         '''
-
-    def __init__(self, args):
+    
+    def __init__(self, args, feature_ids):
         self.games = ''
         self.teams = ''
         self.records = ''
