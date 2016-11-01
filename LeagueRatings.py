@@ -1,8 +1,11 @@
 import numpy as np
 import nflgame
+import mlbgame
+import nba_py as nbagame
 from operator import itemgetter as ig
 from copy import deepcopy as dc
 import pandas as pd
+import datetime as dt
 #pf = points for ( total points scored)
 #hpf = home points for
 #hpa = home points against
@@ -13,73 +16,192 @@ import pandas as pd
 
 #we will have one data set such as this [win/loss, home/away, pf, pa]
 
-
-class Rater(object):
-
-    def __init__(self, league, start=True):
-        self.league = league.lower()
-        self.league_feature_ids = {'nfl':['op', 'hp', 'ap', 'pf', 'pa', 'hpf', 'hpa', 'apf', 'apa']}
-        self.weights_list = {'nfl':np.array([1., 2., 3., 2., 2., 1.5, 2., 2., 1.5])}
-        self.feature_ids = self.league_feature_ids[self.league]
-        self.weights = self.weights_list[self.league]
-        self.get_games = ''
-        self.games = []
-        self.teams = []
-        self.records = {}
-        self.adjusted_features = {}
-        self.features = {}
-        self.weighted_features = {}
-        self.ranks = []
-        self.split = []
-        self.feature_table = []
-        self.overall_rank=[]
-        if start:
-            self.get_ratings()
-    
-                    
-    
-    def get_overall_performance(self, record):
-        ## Records here are given in  the format of [win or loss, home or away]
-        ## the form is [2 for win, 0 for loss, 1 for tie, 1 for home and 0 for away]
-        overall_performance = 0
-        home_performance = 0
-        away_performance = 0
-
-        for game in record:
-            overall_performance += game[0] * 1.
-            if game[1] == 1:
-                home_performance += game[0] * 1.
-            else:
-                away_performance += game[0] * 1.
-        return overall_performance, home_performance, away_performance
+class NBA(object):
+    def __init__(self, args):
+        self.args = args
 
 
+class MLB(object):
+    ''' MLB class to extract information for feature analysis.
+
+        Arguments:
+            args: dictionary containing some default arguments.
+                    Should at minimum be
+                    {'year':''}
+    '''
+
+    def __init__(self, args):
+        self.games = ''
+        self.teams = ''
+        self.records = ''
+        self.args = args
+        if args['year'] != '':
+            self.get_games()
+            self.remove_preseason_games()
+            self.get_teams()
+            self.get_records()
 
 
+    def get_games(self, args=None):
+        ''' This will retrieve the games using mlbgame
 
-    def get_points(self, record):
-        tot_len = len(record)
-        home_len = len([r for r in record if r[1] == 1]) * 1.
-        away_len = len([r for r in record if r[1] == 0]) * 1.
-        pf  =  sum([r[2] * 1. for r in record]) / tot_len
-        hpf =  sum([r[2] * 1. for r in record if r[1] == 1]) / home_len
-        hpa =  sum([r[3] * 1. for r in record if r[1] == 1]) * (-1. / home_len)
-        pa  =  sum([r[3] * 1. for r in record]) * -1. / tot_len
-        apf =  sum([r[2] * 1. for r in record if r[1] == 0]) / away_len
-        apa =  sum([r[3] * 1. for r in record if r[1] == 0]) * ( -1. / away_len)
-        return pf, hpf, apf, pa, hpa, apa
+        arguments:
+            args - If you want to send a different set of args in you can
+        '''
+        if args == None:
+            args = self.args
+        if args['year'] != '' and args['month'] == '':
+            self.games = mlbgame.games(args['year'])
+        elif args['year'] != '' and args['month'] != '':
+            self.games = mlbgame.games(args['year'], args['month'])
+        
+        
+    def remove_preseason_games(self, args=None ):
+        '''This function removes preseason games based on the start of the season
+        arguments:
+            args - This should contain a start date that is a datetime.datetime object. defaults to None
+        '''
+        if args == None:
+            start = self.args['start']
+        games1 = self.games
+        games2 = dc(games1)
+        print "len of list one is {0} and len of list two is {1}".format(len(games1), len(games2))
+        for i in range(0, len(games1)):       
+            for j in range(0, len(games1[0])):
+                game = games1[i][j]
+                if game.date < start:
+                    games2.pop(0)
+                    break
+        self.games = games2
 
 
-    def get_nfl_games(self, year, ending_week):
-        weeks = range(1, ending_week + 1)
-        games = nflgame.games(year, week=weeks)
-        self.games = games
+    def get_records(self, season=None, teams=None, start=None, end=None):
+        ''' Takes in the seasons worth of data and creates a records dictionary
+
+        arguments:
+            season - This is a list where each entry from 0 to the end is a days worth of games. Defaults to none
+            teams  - list of teams. Defaults to none
+            start  - start date you want to get games for. Defaults to None
+            end    - first day you do not want records for, ie start of postseason
+        '''
+        def _remove_no_play(records):
+            for key in records:
+                new_records = []
+                for game in records[key]:
+                    if game[2] == game[3] and game[2] == 0:
+                        pass
+                    else:
+                        new_records.append(game)
+                records[key] = new_records
+            return records
 
 
-    def get_records(self, teams='', games=''):
-        if teams == '':
+        if start == None:
+            start = self.args['start']
+        if season == None:
+            season = self.games
+        if teams == None:
             teams = self.teams
-        if games == '':
+        if end == None:
+            end = self.args['end']
+        
+        records = {}
+        not_count = {}
+        for team in teams:
+            records[team] = []
+        for games in season:
+            for game in games:
+                if game.date < start or game.date >= end:
+                    break
+                home_team = game.home_team
+                home_team_hits = game.home_team_hits
+                home_team_runs = game.home_team_runs
+                away_team = game.away_team
+                away_team_hits = game.away_team_hits
+                away_team_runs = game.away_team_runs
+                if home_team in ['AL All-Stars', 'NL All-Stars']:
+                    break
+
+                if home_team_runs > away_team_runs:
+                    ht_record = [2, 1, home_team_runs, away_team_runs, home_team_hits, away_team_hits]
+                    at_record = [0, 0, away_team_runs, home_team_runs, away_team_hits, home_team_hits]
+                else:
+                    ht_record = [0, 1, home_team_runs, away_team_runs, home_team_hits, away_team_hits]
+                    at_record = [2, 0, away_team_runs, home_team_runs, away_team_hits, home_team_hits]
+                    
+
+                records[home_team].append(ht_record)
+                records[away_team].append(at_record)
+       
+       # print "braves have {0} number of records but played {1} number of games".format(braves_tot, braves_played)
+        records = _remove_no_play(records)
+        self.records = records
+
+
+    def get_teams(self, games=None):
+        ''' gets the teams based on the games that have been played. Currently there is no easy to way to currate a list as there is from nflgame
+
+            Arguments:
+                games - games that have been played. If it contains all 30 teams it should be able create the needed list
+        '''
+        if games == None:
+            games = self.games
+        teams = []
+
+        for i in range(0, len(games)):
+            for game in games[i]:
+                if game.home_team in ['NL All-Stars', 'AL All-Stars']:
+                    pass
+                elif game.away_team in ['NL All-Stars', 'AL All-Stars']:
+                    pass
+                else:
+                    if game.home_team not in teams:
+                        teams.append(game.home_team)
+                    if game.away_team not in teams:
+                        teams.append(game.away_team)
+                    if len(teams)>= 30:
+                        self.teams = teams
+
+
+
+class NFL(object):
+    ''' This class gathers NLF record information to later create features
+        Arguments:
+            args: args needs to atleast resemble the following
+                {'year':'',
+                'week':''}
+
+        '''
+
+    def __init__(self, args):
+        self.games = ''
+        self.teams = ''
+        self.records = ''
+        self.args = args
+        self.get_teams()
+        self.weeks = args['week']
+        self.year = args['year']
+        if self.args['year'] != '' and self.args['week'] != '':
+            self.get_games()
+            self.get_records()
+
+
+    def get_teams(self,):
+        ''' Gets the teams in the NFL '''
+
+        self.teams = [t[0] for t in nflgame.teams if t[0] != 'STL']
+
+
+    
+    def get_records(self, teams=None, games=None):
+        ''' gets the records for teams so that we can create our features 
+            Arguments:
+                teams - list of teams. Defaults to None
+                games - list of games
+        '''
+        if teams == None:
+            teams = self.teams
+        if games == None:
             games = self.games
         records = {key: [] for key in teams}
         for game in games:
@@ -110,37 +232,231 @@ class Rater(object):
         self.records = records
 
 
-    def get_max(self, features=''):
-        if features == '':
+    def get_games(self, year = None , ending_week = None, only_week=False):
+        ''' This function sets self.games = the games for the year and week given
+
+            arguments:
+                year - 4 digit year. Leave blank if you already have specified the year when creating League object (default to '')
+                ending_week - can be left emtpy, or a list, or an integer. Leave blank if you want to use the week/weeks specified in the creation of the class (defaults to '')
+                only_week - a flag to set true if you only want the data given in the week set as ending_week
+
+        '''
+        is_list = isinstance(self.weeks, list)
+        if year == None:
+            year = self.year
+        if ending_week == None and not is_list:
+            weeks = range(1, self.weeks + 1)
+        elif ending_week == None and is_list:
+            weeks = self.weeks
+        elif isinstance(ending_week, list):
+            weeks = ending_week
+        elif only_week:
+            if ending_week != None:
+                weeks = ending_week
+            else:
+                weeks = self.week
+        else:
+            weeks = range(1, ending_week + 1)
+
+        games = nflgame.games(year, week=weeks)
+        self.games = games
+
+
+class Leagues(object):
+    """ gets the data from the set specificied when calling the league object.
+
+
+        aguments:
+        league - league such as nfl, mlb, ncaaf, ncaab, nhl. It currently only works for nfl and mlb.
+        year - year you want data from (default is blank)
+        weeks - Weeks you want data from. This can be a list or integer.
+        start - This can be used to define the start of the season for mlb seasons
+        """
+
+
+    def __init__(self, args):
+        self.league_name = args['league'].lower()
+        self.league = {}
+        self.args = args
+        self.get_league()
+
+
+    def get_league(self):
+        if self.league_name == 'nfl':
+            self.league = NFL(self.args)
+        elif self.league_name =='mlb':
+            self.league = MLB(self.args)
+            
+
+
+
+    
+            
+
+
+
+
+
+
+
+
+class Rater(object):
+    ''' function that takes in a league object and rates the varius teams in that league based on the features specified'''
+
+    def __init__(self, league, start=True):
+        self.league = league.league_name
+        self.league_feature_ids = {'nfl':['op', 'hp', 'ap', 'pf', 'pa', 'hpf', 'hpa', 'apf', 'apa'],
+                                   'mlb':['op', 'hp', 'ap', 'rf', 'ra', 'hrf', 'hra', 'arf', 'ara']}
+        self.codes = ['','','','o', 'h', 'h', 'o', 'a', 'a']
+        self.indexes = [0, 0, 0, 2, 2, 3, 3, 2, 3]
+        self.weights_list = {'nfl':np.array([1., 2., 3., 2., 2., 1.5, 2., 2., 1.5]),
+                             'mlb':np.array([1., 2., 3., 2., 2., 1.5, 2., 2., 1.5])}
+        self.feature_ids = self.league_feature_ids[self.league]
+        self.weights = self.weights_list[self.league]
+        self.games = league.league.games
+        self.teams = league.league.teams
+        self.records = league.league.records
+        self.adjusted_features = {}
+        self.features = {}
+        self.weighted_features = {}
+        self.ranks = []
+        self.split = []
+        self.feature_table = []
+        self.overall_rank=[]
+        if start:
+            self.get_ratings()
+    
+                    
+    
+    def get_overall_performance(self, record):
+        ''' gets overall peformance in terms of total wins, home wins, and away wins'''
+        ## Records here are given in  the format of [win or loss, home or away]
+        ## the form is [2 for win, 0 for loss, 1 for tie, 1 for home and 0 for away]
+        overall_performance = 0
+        home_performance = 0
+        away_performance = 0
+
+        for game in record:
+            overall_performance += game[0] * 1.
+            if game[1] == 1:
+                home_performance += game[0] * 1.
+            else:
+                away_performance += game[0] * 1.
+        return overall_performance, home_performance, away_performance
+
+
+    def points(self, record,  index, typ, record_len, home_len, away_len):
+        where = None
+        if typ == 'o':
+            div = record_len * 1.0
+        elif typ == 'h':
+            div = home_len * 1.
+            where = 1
+        elif typ == 'a':
+            div = away_len * 1.
+            where = 0
+        if not where:
+            return sum([r[index] * 1. for r in record]) / div
+        else:
+            return sum([r[index] * 1. for r in record if r[1] == where]) / div
+
+
+
+    def get_points(self, record=None, keys=None, indexes=None, other=''):
+        '''Will get all of the points summed up and averages
+
+            arguments:
+                record - the records for a team. Defaults to None
+                other  - undetermined at this time
+
+            returns:
+                all point related features calculated
+                
+        '''
+        if record == None:
+            record = self.record
+        if keys == None:
+            keys = self.codes
+        if indexes == None:
+            indexes = self.indexes
+        tot_len = len(record) * 1.
+        if tot_len == 0.0:
+            tot_len = 1.0
+        home_len = len([r for r in record if r[1] == 1]) * 1.
+        if home_len == 0.0:
+            home_len = 1.
+        away_len = len([r for r in record if r[1] == 0]) * 1.
+        if away_len == 0.0:
+            away_len = 1.
+
+        pf  =  sum([r[2] * 1. for r in record]) / tot_len
+        hpf =  sum([r[2] * 1. for r in record if r[1] == 1]) / home_len
+        hpa =  sum([r[3] * 1. for r in record if r[1] == 1]) * (-1. / home_len)
+        pa  =  sum([r[3] * 1. for r in record]) * -1. / tot_len
+        apf =  sum([r[2] * 1. for r in record if r[1] == 0]) / away_len
+        apa =  sum([r[3] * 1. for r in record if r[1] == 0]) * ( -1. / away_len)
+        other_features = [pf, hpf, apf, pa, hpa, apa]
+        rec_len = len(record[0])
+
+        return other_features
+
+
+    def get_max(self, features=None):
+        ''' this will get the max value for each feature for all teams
+
+        arguments:
+            features - The features we will get the max of
+        return:
+            returns all of the maxes in an np.array()
+            '''
+        if features == None:
             features = dc(self.features)
         sets = np.array([features[key] for key in features])
+        print sets
         maxs = []
         for i in range(0, len(sets[0])):
             maxs.append(max(abs(sets[:,i])))        
         return np.array(maxs)
 
 
-    def apply_max(self, maxs, features=''):
-        if features == '':
+    def apply_max(self, maxs, features=None):
+        ''' Applies the maximums found in get_max
+
+            Arguments:
+                maxs - the maximums found in get_max
+                features - features dictionary with teams that we will apply maxs to. Defaults to None
+        '''
+        if features == None:
             features = dc(self.features)
         for team in features:
             features[team] = features[team]/maxs
         self.adjusted_features = features
 
 
-    def apply_weights(self, unweighted_features='', weights=''):
-        if unweighted_features == '':
+    def apply_weights(self, unweighted_features=None, weights=None):
+        ''' applies the weights and sum the values to get a score for each team
+            Arguments:
+                unweighted_features - features that have been adjusted for maxs, but not weighted. Defaults to None
+                weights - weights to give importance to each feature
+                
+        '''
+        if unweighted_features == None:
             unweighted_features = dc(self.adjusted_features)
-        if weights == '':
+        if weights == None:
             weights = self.weights
         for team in unweighted_features:
             unweighted_features[team] =  sum(unweighted_features[team] * weights) 
         self.weighted_features = unweighted_features
 
 
-    def get_team_ranks(self, summed_features='', do_print=False):
+    def get_team_ranks(self, summed_features=None, do_print=False):
+        '''Creates the team rankings and also can print a table. Saves the output in a pandas dataframe
+
+            Arguments:
+                summed_features - the output of apply_weights. Defaults to None
+        '''
         rankings=[]
-        if summed_features == '':
+        if summed_features == None:
             summed_features = dc(self.weighted_features)
         columns = ['TEAM', 'RATING']
         if do_print:
@@ -152,6 +468,8 @@ class Rater(object):
                 print "{2}|{0}|{1}".format(team, rating, i)
             rankings.append([team, rating])
             i += 1
+        if do_print:
+            return
         df = pd.DataFrame(np.array(rankings), columns=columns)
         df.index += 1
         self.overall_rank = df
@@ -174,8 +492,13 @@ class Rater(object):
         self.feature_ranks = feature_ranks
 
 
-    def split_features(self, adjusted_features=''):
-        if adjusted_features == '':
+    def split_features(self, adjusted_features=None):
+        '''splits the features up so that we can rate each team on each feature
+
+            Arguments:
+                adjust_features - features that have been adjusted by maxes. Weights don't matter here because they won't change who was higher or lower. Defaults to None
+        '''
+        if adjusted_features == None:
             adjusted_features = dc(self.adjusted_features)
         split = []
         for i in range(0,9):
@@ -186,10 +509,18 @@ class Rater(object):
         self.split = split
 
 
-    def get_split_ranks(self, split_feat='', feature_id='', do_print=False):
-        if split_feat == '':
+        
+
+
+    def get_split_ranks(self, split_feat=None, feature_id=None, do_print=False):
+        '''Creates the rankings for each team based on the splits. Stores the result in a pandas data frame in self.ranks
+            Arguments:
+                split_feat - This is the result from split_features
+                feature_id - the features that we are using. This will give us a column name for the table
+        '''
+        if split_feat == None:
             split_feat = dc(self.split)
-        if feature_id == '':
+        if feature_id == None:
             feature_id = dc(self.feature_ids)
         feature_ranks = []
         f_len = len(feature_id)
@@ -212,19 +543,27 @@ class Rater(object):
         self.ranks = t_ranks
 
            
-    def get_feature_sets(self, records=''):
-        if records == '':
+    def get_feature_sets(self, records=None):
+        ''' this combines the output from get_overall_performance and get_points to create a feature set for each team
+            Arguments:
+                records - the records that we be fed into get_points and get_overall_performance. Defaults to None
+            '''
+        if records == None:
             records = self.records
         features = {key: [] for key in records}
         for team in records:
             record = records[team]
-            pf, hpf, apf, pa, hpa, apa = self.get_points(record)
+            others = self.get_points(record)
             op, hp, ap =  self.get_overall_performance(record)
-            features[team] = [op, hp, ap, pf, pa, hpf, hpa, apf, apa]
+            feats = [op, hp, ap]
+            for feat in others:
+                feats.append(feat)
+            features[team] = feats
         self.features = features
 
 
     def print_table(self):
+        '''prints self.ranks '''
         columns = 'rank|'
         for i in self.feature_ids:
             string = i
@@ -256,29 +595,15 @@ class Rater(object):
             print row
 
 
-    def set_get_games(self):
-        if self.league == 'nfl':
-            self.get_games = self.get_nfl_games
-
-        
-    def get_teams(self, league= ''):
-        if league == '':
-            league = dc(self.league)
-        if league == 'nfl':
-            ## If it still has STL, remove it. Currently it does.
-            self.teams = [t[0] for t in nflgame.teams if t[0] != 'STL']
-
     def get_feature_table(self):
+        ''' takes self.ranks and creates dataframe to store in a table '''
         table = pd.DataFrame(self.ranks, columns=self.feature_ids)
         table.index += 1
         self.feature_table = table
 
 
     def get_ratings(self):
-        self.set_get_games()
-        self.get_games(2016, 7)
-        self.get_teams()
-        records = self.get_records()
+        ''' function goes through the process of getting all of the ratings done'''
         self.get_feature_sets()
         self.weights = self.weights / sum(self.weights)
         maxs = self.get_max()
@@ -288,6 +613,19 @@ class Rater(object):
         self.get_team_ranks()
         self.get_split_ranks()
         self.get_feature_table()
+
+
+    def get_teams_ind_ratings(self, team):
+        ''' function used find where a team ranks on each feature
+            arguments:
+                team - team to search for
+            returns:
+                ratings for that team
+        '''
+        ratings = []
+        for feature in self.feature_ids:
+            ratings.append(self.feature_table[self.feature_table[feature] == team].index[0])
+        return ratings
         
         
         
@@ -295,9 +633,19 @@ class Rater(object):
 
 
 if __name__ == '__main__':
-    r = Rater('nfl')
-
-
-
-
-
+    args1 = {'league':'mlb',
+            'year':2016,
+            'week':8,
+            'month':''}
+    args2 = {'league':'nfl',
+             'year':2016,
+             'week':8}
+    #l = Leagues(args)
+    start = dt.datetime(2016, 4, 3)
+    end = dt.datetime(2016, 10, 2)
+    args1['start'] = start
+    args1['end'] = end
+    #mlb = Leagues(args1)
+    nfl = Leagues(args2)
+    #mlb_rate = Rater(mlb)
+    nfl_rate = Rater(nfl)
