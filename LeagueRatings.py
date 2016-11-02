@@ -205,12 +205,12 @@ class NFL(object):
         self.records = ''
         self.args = args
         self.feature_ids = feature_ids
-        self.get_teams()
         self.codes = []
         self.weeks = args['week']
         self.year = args['year']
         self.yaml_path = yaml_path
         self.code_map = {}
+        elf.get_teams()
         self._load_yaml()
         self.get_codes()
 
