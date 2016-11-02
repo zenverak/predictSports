@@ -6,6 +6,7 @@ from operator import itemgetter as ig
 from copy import deepcopy as dc
 import pandas as pd
 import datetime as dt
+import yaml
 #pf = points for ( total points scored)
 #hpf = home points for
 #hpa = home points against
@@ -171,26 +172,81 @@ class NFL(object):
                 {'year':'',
                 'week':''}
 
+            feature_ids:
+                op = overall performance ( number of wins)
+                hp = home performance  ( number of wins at home)
+                ap = away performance  ( number of wins away)
+                pf = point for
+                pa = points alowed
+                hpf = home points for
+                hpa = home points allowed
+                apf = away points for
+                apa = away points allowed
+                **for rest of these add h in front for these features at home and a in front for these features away rush as fd becomes hfd for home first downs
+                fd = first downs
+                ty = total yards
+                py = passing yards
+                ry = rushing yards
+                pnt = number of penalties
+                pnty = penalty yards
+                to = turnovers
+                fda = first downs allowed
+                tya = total yards allowed
+                pya = passying yards allowed
+                rya = rushing yards allowed
+                pnta = penalty yards allowed ( ie penalties opposing team got)
+                pntya = penalty yards allowed ( or given by opponnent)
+                tog = turn over gained
         '''
-
-    def __init__(self, args):
+    
+    def __init__(self, args, feature_ids, yaml_path='./nfl_code_mapping.yaml'):
         self.games = ''
         self.teams = ''
         self.records = ''
         self.args = args
-        self.get_teams()
+        self.feature_ids = feature_ids
+        self.codes = []
         self.weeks = args['week']
         self.year = args['year']
+        self.yaml_path = yaml_path
+        self.code_map = {}
+        elf.get_teams()
+        self._load_yaml()
+        self.get_codes()
+
         if self.args['year'] != '' and self.args['week'] != '':
             self.get_games()
             self.get_records()
 
 
-    def get_teams(self,):
+    def get_teams(self):
         ''' Gets the teams in the NFL '''
 
         self.teams = [t[0] for t in nflgame.teams if t[0] != 'STL']
 
+    def _load_yaml(self):
+        try:
+            code_map = open(self.yaml_path, 'r')
+            self.code_map = yaml.load(code_map)
+        except:
+            print "file not found"
+        
+        
+
+
+    def get_codes(self, feature_ids=None):
+        if feature_ids == None:
+            feature_ids = self.feature_ids
+        codes = []
+        for feature in feature_ids:
+            try:
+                codes.append(self.code_map[feature])
+            except:
+                print "That code is not one we know"
+        self.codes = codes
+        
+
+        
 
     
     def get_records(self, teams=None, games=None):
@@ -207,6 +263,8 @@ class NFL(object):
         for game in games:
             home_team = game.home
             away_team = game.away
+            home_stats = game.stats_home
+            away_stats = game.stats_away
             if home_team == 'JAX':
                 home_team = 'JAC'
             if away_team == 'JAX':
@@ -224,9 +282,11 @@ class NFL(object):
             else:
                 home_winloss = 1.
                 away_winloss = 1.
-            ## records in the form of [win/loss, home/away (1/0), pf, pa]
-            home_info = [home_winloss, 1, home_points, away_points]
-            away_info = [away_winloss, 0, away_points, home_points]
+            ## records in the form of [win/loss, home/away (1/0), pf, pa, fd, ty, py, ry, pnt, pty, to, ]
+            home_info = [home_winloss, 1, home_points, away_points, home_stats[0], home_stats[1], home_stats[2], home_stats[3], home_stats[4], home_stats[5], home_stats[6],
+                         away_stats[0], away_stats[1], away_stats[2] , away_stats[3], away_stats[4], away_stats[5], away_stats[5]]
+            away_info = [away_winloss, 0, away_points, home_points, away_stats[0], away_stats[1], away_stats[2] , away_stats[3], away_stats[4], away_stats[5], away_stats[5],
+                         home_stats[0], home_stats[1], home_stats[2], home_stats[3], home_stats[4], home_stats[5], home_stats[6]]
             records[home_team].append(home_info)
             records[away_team].append(away_info)
         self.records = records
@@ -274,8 +334,10 @@ class Leagues(object):
         """
 
 
-    def __init__(self, args):
+    def __init__(self, args, feature_ids, yaml_path=None):
         self.league_name = args['league'].lower()
+        self.feature_ids = feature_ids
+        self.yaml_path = yaml_path
         self.league = {}
         self.args = args
         self.get_league()
@@ -283,21 +345,15 @@ class Leagues(object):
 
     def get_league(self):
         if self.league_name == 'nfl':
-            self.league = NFL(self.args)
+            if self.yaml_path == None:
+                self.league = NFL(self.args, self.feature_ids)
+            else:
+                self.league = NFL(self.args, self.feature_ids, self.yaml_path)
         elif self.league_name =='mlb':
-            self.league = MLB(self.args)
-            
-
-
-
-    
-            
-
-
-
-
-
-
+            if self.yaml_path == None:
+                self.league = MLB(self.args, self.feature_ids)
+            else:
+                self.league = MLB(self.args, self.feature_ids, self.yaml_path)
 
 
 class Rater(object):
@@ -305,13 +361,10 @@ class Rater(object):
 
     def __init__(self, league, start=True):
         self.league = league.league_name
-        self.league_feature_ids = {'nfl':['op', 'hp', 'ap', 'pf', 'pa', 'hpf', 'hpa', 'apf', 'apa'],
-                                   'mlb':['op', 'hp', 'ap', 'rf', 'ra', 'hrf', 'hra', 'arf', 'ara']}
-        self.codes = ['','','','o', 'h', 'h', 'o', 'a', 'a']
-        self.indexes = [0, 0, 0, 2, 2, 3, 3, 2, 3]
+        self.codes = league.league.codes#[[0, 'o', 'p','s'], [0, 'h', 'p','s'], [0, 'a', 'p','s'], [2, 'o','p','pg'],[2, 'h', 'p', 'pg'], [2, 'a', 'p', 'pg'], [3, 'o', 'n', 'pg'], [3, 'h', 'n', 'pg'], [3, 'a', 'n', 'pg']]
         self.weights_list = {'nfl':np.array([1., 2., 3., 2., 2., 1.5, 2., 2., 1.5]),
                              'mlb':np.array([1., 2., 3., 2., 2., 1.5, 2., 2., 1.5])}
-        self.feature_ids = self.league_feature_ids[self.league]
+        self.feature_ids = league.feature_ids
         self.weights = self.weights_list[self.league]
         self.games = league.league.games
         self.teams = league.league.teams
@@ -325,61 +378,68 @@ class Rater(object):
         self.overall_rank=[]
         if start:
             self.get_ratings()
-    
-                    
-    
-    def get_overall_performance(self, record):
-        ''' gets overall peformance in terms of total wins, home wins, and away wins'''
-        ## Records here are given in  the format of [win or loss, home or away]
-        ## the form is [2 for win, 0 for loss, 1 for tie, 1 for home and 0 for away]
-        overall_performance = 0
-        home_performance = 0
-        away_performance = 0
-
-        for game in record:
-            overall_performance += game[0] * 1.
-            if game[1] == 1:
-                home_performance += game[0] * 1.
-            else:
-                away_performance += game[0] * 1.
-        return overall_performance, home_performance, away_performance
 
 
-    def points(self, record,  index, typ, record_len, home_len, away_len):
+
+    def calculate_per_game_features(self, record,  code, record_len, home_len, away_len):
+        typ = code[1]
+        index = code[0]
         where = None
+        if code[2] == 'p':
+            pm = 1.0
+        else:
+            pm = -1.0
         if typ == 'o':
-            div = record_len * 1.0
+            div = record_len * pm
         elif typ == 'h':
-            div = home_len * 1.
+            div = home_len * pm
             where = 1
         elif typ == 'a':
-            div = away_len * 1.
+            div = away_len * pm
             where = 0
-        if not where:
+        if where == None:
             return sum([r[index] * 1. for r in record]) / div
         else:
             return sum([r[index] * 1. for r in record if r[1] == where]) / div
 
 
+    def calculate_season_features(self, record, code):
+        typ = code[1]
+        index = code[0]
+        where = None
+        if code[2] == 'p':
+            pm = 1.0
+        else:
+            pm = -1.0
+        if typ == 'h':
+            where = 1
+        elif typ == 'a':
+            where = 0
+        if where == None:
+            return sum([r[index] * pm for r in record])
+        else:
+            return sum([r[index] * pm for r in record if r[1] == where])
+        
+        
 
-    def get_points(self, record=None, keys=None, indexes=None, other=''):
+
+    def calculate_features(self, record=None, codes=None):
         '''Will get all of the points summed up and averages
 
             arguments:
                 record - the records for a team. Defaults to None
-                other  - undetermined at this time
+                codes  - codes used to determine how we calcluate a certain feature.
 
             returns:
                 all point related features calculated
                 
         '''
         if record == None:
-            record = self.record
-        if keys == None:
-            keys = self.codes
-        if indexes == None:
-            indexes = self.indexes
+            record = self.records
+        if codes == None:
+            codes = self.codes
         tot_len = len(record) * 1.
+
         if tot_len == 0.0:
             tot_len = 1.0
         home_len = len([r for r in record if r[1] == 1]) * 1.
@@ -388,17 +448,13 @@ class Rater(object):
         away_len = len([r for r in record if r[1] == 0]) * 1.
         if away_len == 0.0:
             away_len = 1.
-
-        pf  =  sum([r[2] * 1. for r in record]) / tot_len
-        hpf =  sum([r[2] * 1. for r in record if r[1] == 1]) / home_len
-        hpa =  sum([r[3] * 1. for r in record if r[1] == 1]) * (-1. / home_len)
-        pa  =  sum([r[3] * 1. for r in record]) * -1. / tot_len
-        apf =  sum([r[2] * 1. for r in record if r[1] == 0]) / away_len
-        apa =  sum([r[3] * 1. for r in record if r[1] == 0]) * ( -1. / away_len)
-        other_features = [pf, hpf, apf, pa, hpa, apa]
-        rec_len = len(record[0])
-
-        return other_features
+        features = []
+        for i in range(0, len(self.feature_ids)):
+            if codes[i][3] == 'pg':
+                features.append(self.calculate_per_game_features(record, codes[i], tot_len, home_len, away_len))
+            else:
+                features.append(self.calculate_season_features(record, codes[i]))
+        return np.array(features)
 
 
     def get_max(self, features=None):
@@ -412,7 +468,6 @@ class Rater(object):
         if features == None:
             features = dc(self.features)
         sets = np.array([features[key] for key in features])
-        print sets
         maxs = []
         for i in range(0, len(sets[0])):
             maxs.append(max(abs(sets[:,i])))        
@@ -552,13 +607,8 @@ class Rater(object):
             records = self.records
         features = {key: [] for key in records}
         for team in records:
-            record = records[team]
-            others = self.get_points(record)
-            op, hp, ap =  self.get_overall_performance(record)
-            feats = [op, hp, ap]
-            for feat in others:
-                feats.append(feat)
-            features[team] = feats
+            record = records[team]            
+            features[team] = self.calculate_features(record)
         self.features = features
 
 
@@ -645,7 +695,8 @@ if __name__ == '__main__':
     end = dt.datetime(2016, 10, 2)
     args1['start'] = start
     args1['end'] = end
+    fid = ['op', 'hp', 'ap', 'pf', 'pa', 'hpf', 'hpa', 'apf', 'apa']
     #mlb = Leagues(args1)
-    nfl = Leagues(args2)
+    nfl = Leagues(args2, fid)
     #mlb_rate = Rater(mlb)
     nfl_rate = Rater(nfl)
