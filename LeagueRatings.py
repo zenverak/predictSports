@@ -71,12 +71,13 @@ class MLB(object):
         elif args['year'] != '' and args['month'] != '':
             self.games = mlbgame.games(args['year'], args['month'])
 
+
     def get_codes(self, feature_ids=None):
         if feature_ids == None:
             feature_ids = self.feature_ids
         codes = []
         for feature in feature_ids:
-            codes.append(code_map[feature])
+            codes.append(self.code_map[feature])
         self.codes = codes
         
         
@@ -89,7 +90,6 @@ class MLB(object):
             start = self.args['start']
         games1 = self.games
         games2 = dc(games1)
-        print "len of list one is {0} and len of list two is {1}".format(len(games1), len(games2))
         for i in range(0, len(games1)):       
             for j in range(0, len(games1[0])):
                 game = games1[i][j]
