@@ -6,6 +6,7 @@ from operator import itemgetter as ig
 from copy import deepcopy as dc
 import pandas as pd
 import datetime as dt
+import yaml
 #pf = points for ( total points scored)
 #hpf = home points for
 #hpa = home points against
@@ -198,66 +199,21 @@ class NFL(object):
                 tog = turn over gained
         '''
     
-    def __init__(self, args, feature_ids):
+    def __init__(self, args, feature_ids, yaml_path='./nfl_code_mapping.yaml'):
         self.games = ''
         self.teams = ''
         self.records = ''
         self.args = args
+        self.feature_ids = feature_ids
         self.get_teams()
         self.codes = []
         self.weeks = args['week']
         self.year = args['year']
-        self.code_map ={'op':[0, 'o', 'p' ,'s'],
-                 'hp':[0, 'h', 'p', 's'],
-                 'ap':[0, 'a', 'p', 's'],
-                 'pf':[2, 'o', 'p','pg'],
-                 'pa':[3, 'o', 'n','pg'],
-                 'hpf':[2, 'h', 'p', 'pg'],
-                 'hpa':[3, 'h', 'n', 'pg'],
-                 'apf':[2, 'a', 'p', 'pg'],
-                 'apa':[3, 'a', 'n', 'pg'],
-                 'fd':[4, 'o', 'p', 'pg'],
-                 'hfd':[4, 'h', 'p', 'pg'],
-                 'afd':[4, 'a', 'p', 'pg'],
-                 'ty':[5, 'o', 'p', 'pg'],
-                 'hty':[5, 'h', 'p', 'pg'],
-                 'aty':[5, 'a', 'p', 'pg'],
-                 'py':[6, 'o', 'p', 'pg'],
-                 'hpy':[6, 'h', 'p', 'pg'],
-                 'apy':[6, 'a', 'p', 'pg'],
-                 'ry':[7, 'o', 'p', 'pg'],
-                 'hry':[7, 'h', 'p', 'pg'],
-                 'ary':[7, 'a', 'p', 'pg'],
-                 'pnt':[8, 'o', 'n', 'pg'],
-                 'hpnt':[8, 'h', 'n', 'pg'],
-                 'apnt':[8, 'a', 'n', 'pg'],
-                 'pnty':[9, 'o', 'n', 'pg'],
-                 'hpnty':[9, 'h', 'n', 'pg'],
-                 'apnty':[9, 'a', 'n', 'pg'],
-                 'to':[10, 'o', 'n', 'pg'],
-                 'hto':[10, 'h', 'n', 'pg'],
-                 'ato':[10, 'a', 'n', 'pg'],
-                 'fda':[11, 'o', 'n', 'pg'],
-                 'hfda':[11, 'h', 'n', 'pg'],
-                 'afda':[11, 'a', 'n', 'pg'],
-                 'tya':[12, 'o', 'n', 'pg'],
-                 'htya':[12, 'h', 'n', 'pg'],
-                 'atya':[12, 'a', 'n', 'pg'],
-                 'pya':[13, 'o', 'n', 'pg',],
-                 'hpya':[13, 'h', 'n', 'pg',],
-                 'apya':[13, 'a', 'n', 'pg',],
-                 'rya':[14, 'o', 'n', 'pg'],
-                 'hrya':[14, 'h', 'n', 'pg'],
-                 'arya':[14, 'a', 'n', 'pg'],
-                 'pnta':[15, 'o', 'p', 'pg'],
-                 'hpnta':[15, 'h', 'p', 'pg'],
-                 'apnta':[15, 'a', 'p', 'pg'],
-                 'pntya':[16, 'o', 'p', 'pg'],
-                 'hpntya':[16, 'h', 'p', 'pg'],
-                 'apntya':[16, 'a', 'p', 'pg'],
-                 'tog':[17, 'o', 'p', 'pg'],
-                 'htog':[17, 'h', 'p', 'pg'],
-                 'atog':[17, 'a', 'p', 'pg']}
+        self.yaml_path = yaml_path
+        self.code_map = {}
+        self._load_yaml()
+        self.get_codes()
+
         if self.args['year'] != '' and self.args['week'] != '':
             self.get_games()
             self.get_records()
@@ -268,14 +224,25 @@ class NFL(object):
 
         self.teams = [t[0] for t in nflgame.teams if t[0] != 'STL']
 
+    def _load_yaml(self):
+        try:
+            code_map = open(self.yaml_path, 'r')
+            self.code_map = yaml.load(code_map)
+        except:
+            print "file not found"
+        
+        
 
-    def get_codes(self, feature_ids):
+
+    def get_codes(self, feature_ids=None):
+        if feature_ids == None:
+            feature_ids = self.feature_ids
         codes = []
         for feature in feature_ids:
             try:
                 codes.append(self.code_map[feature])
             except:
-                print "that code is not one we know"
+                print "That code is not one we know"
         self.codes = codes
         
 
@@ -367,8 +334,10 @@ class Leagues(object):
         """
 
 
-    def __init__(self, args):
+    def __init__(self, args, feature_ids, yaml_path=None):
         self.league_name = args['league'].lower()
+        self.feature_ids = feature_ids
+        self.yaml_path = yaml_path
         self.league = {}
         self.args = args
         self.get_league()
@@ -376,9 +345,15 @@ class Leagues(object):
 
     def get_league(self):
         if self.league_name == 'nfl':
-            self.league = NFL(self.args)
+            if self.yaml_path == None:
+                self.league = NFL(self.args, self.feature_ids)
+            else:
+                self.league = NFL(self.args, self.feature_ids, self.yaml_path)
         elif self.league_name =='mlb':
-            self.league = MLB(self.args)
+            if self.yaml_path == None:
+                self.league = MLB(self.args, self.feature_ids)
+            else:
+                self.league = MLB(self.args, self.feature_ids, self.yaml_path)
 
 
 class Rater(object):
@@ -386,12 +361,10 @@ class Rater(object):
 
     def __init__(self, league, start=True):
         self.league = league.league_name
-        self.league_feature_ids = {'nfl':['op', 'hp', 'ap', 'pf', 'pa', 'hpf', 'hpa', 'apf', 'apa'],
-                                   'mlb':['op', 'hp', 'ap', 'rf', 'ra', 'hrf', 'hra', 'arf', 'ara']}
-        self.codes = [[0, 'o', 'p','s'], [0, 'h', 'p','s'], [0, 'a', 'p','s'], [2, 'o','p','pg'],[2, 'h', 'p', 'pg'], [2, 'a', 'p', 'pg'], [3, 'o', 'n', 'pg'], [3, 'h', 'n', 'pg'], [3, 'a', 'n', 'pg']]
+        self.codes = league.league.codes#[[0, 'o', 'p','s'], [0, 'h', 'p','s'], [0, 'a', 'p','s'], [2, 'o','p','pg'],[2, 'h', 'p', 'pg'], [2, 'a', 'p', 'pg'], [3, 'o', 'n', 'pg'], [3, 'h', 'n', 'pg'], [3, 'a', 'n', 'pg']]
         self.weights_list = {'nfl':np.array([1., 2., 3., 2., 2., 1.5, 2., 2., 1.5]),
                              'mlb':np.array([1., 2., 3., 2., 2., 1.5, 2., 2., 1.5])}
-        self.feature_ids = self.league_feature_ids[self.league]
+        self.feature_ids = league.feature_ids
         self.weights = self.weights_list[self.league]
         self.games = league.league.games
         self.teams = league.league.teams
@@ -722,7 +695,8 @@ if __name__ == '__main__':
     end = dt.datetime(2016, 10, 2)
     args1['start'] = start
     args1['end'] = end
+    fid = ['op', 'hp', 'ap', 'pf', 'pa', 'hpf', 'hpa', 'apf', 'apa']
     #mlb = Leagues(args1)
-    nfl = Leagues(args2)
+    nfl = Leagues(args2, fid)
     #mlb_rate = Rater(mlb)
     nfl_rate = Rater(nfl)
