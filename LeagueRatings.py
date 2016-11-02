@@ -88,9 +88,13 @@ class MLB(object):
         self.games = games2
 
 
-    def get_stats(game):
+    def get_stats(self, game):
         game_id = game.game_id
-        stats = mlb.team_stats(game_id)
+        try:
+            stats = mlbgame.team_stats(game_id)
+        except:
+ #           print "CAN'T FIND a game with id of {0}".format(game_id)
+            return [0]*18, [0]*18
         home_bat = stats['home_batting']
         away_bat = stats['away_batting']
         home_bat_stats = [home_bat.ab, home_bat.rbi, home_bat.bb, home_bat.avg, home_bat.h - home_bat.d - home_bat.t, home_bat.d, home_bat.t, home_bat.da, home_bat.hr, home_bat.lob, home_bat.obp, home_bat.ops
@@ -166,10 +170,15 @@ class MLB(object):
                     at_record = [2, 0, away_team_runs, home_team_runs, away_team_hits, home_team_hits]
                     
 
-                records[home_team].append(ht_record)
-                records[away_team].append(at_record)
-       
-       # print "braves have {0} number of records but played {1} number of games".format(braves_tot, braves_played)
+                records[home_team] = ht_record
+                records[away_team] = at_record
+                home_other, away_other = self.get_stats(game)
+                for stat1, stat2 in zip(home_other, away_other):
+                    records[home_team].append(stat1)
+                    records[away_team].append(stat2)
+                for stat1, stat2 in zip(home_other, away_other):
+                    records[home_team].append(stat2)
+                    records[away_team].append(stat1)
         records = _remove_no_play(records)
         self.records = records
 
@@ -730,8 +739,8 @@ if __name__ == '__main__':
     end = dt.datetime(2016, 10, 2)
     args1['start'] = start
     args1['end'] = end
-    fid = ['op', 'hp', 'ap', 'pf', 'pa', 'hpf', 'hpa', 'apf', 'apa']
-    #mlb = Leagues(args1)
-    nfl = Leagues(args2, fid)
+    fid = ['op', 'hp', 'ap']
+    mlb = Leagues(args1, fid)
+    #nfl = Leagues(args2, fid)
     #mlb_rate = Rater(mlb)
-    nfl_rate = Rater(nfl)
+    #nfl_rate = Rater(nfl)
