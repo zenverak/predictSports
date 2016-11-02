@@ -35,7 +35,7 @@ class MLB(object):
         self.games = ''
         self.teams = ''
         self.records = ''
-        self.code_map = {}
+        self.codes = {}
         self.args = args
         self.feature_ids = feature_ids
         self.yaml_path = yaml_path
@@ -50,7 +50,7 @@ class MLB(object):
     def _load_yaml(self):
         try:
             code_map = open(self.yaml_path, 'r')
-            self.code_map = yaml.load(code_map)
+            self.codes = yaml.load(code_map)
         except:
             print "file not found"
 
@@ -747,5 +747,5 @@ if __name__ == '__main__':
     fid = ['op', 'hp', 'ap']
     mlb = Leagues(args1, fid)
     #nfl = Leagues(args2, fid)
-    #mlb_rate = Rater(mlb)
+    mlb_rate = Rater(mlb)
     #nfl_rate = Rater(nfl)
