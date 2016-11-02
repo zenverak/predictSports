@@ -128,10 +128,14 @@ class MLB(object):
             for key in records:
                 new_records = []
                 for game in records[key]:
-                    if game[2] == game[3] and game[2] == 0:
-                        pass
-                    else:
-                        new_records.append(game)
+                    try:
+                        if game[2] == game[3] and game[2] == 0:
+                            pass
+                        else:
+                            new_records.append(game)
+                    except:
+                        print "This did not work at all for record {0}".format(game)
+                        return records
                 records[key] = new_records
             return records
 
@@ -170,15 +174,16 @@ class MLB(object):
                     at_record = [2, 0, away_team_runs, home_team_runs, away_team_hits, home_team_hits]
                     
 
-                records[home_team] = ht_record
-                records[away_team] = at_record
+
                 home_other, away_other = self.get_stats(game)
                 for stat1, stat2 in zip(home_other, away_other):
-                    records[home_team].append(stat1)
-                    records[away_team].append(stat2)
+                    ht_record.append(stat1)
+                    at_record.append(stat2)
                 for stat1, stat2 in zip(home_other, away_other):
-                    records[home_team].append(stat2)
-                    records[away_team].append(stat1)
+                    ht_record.append(stat2)
+                    at_record.append(stat1)
+                records[home_team].append(ht_record)
+                records[away_team].append(at_record)
         records = _remove_no_play(records)
         self.records = records
 
