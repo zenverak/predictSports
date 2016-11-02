@@ -31,16 +31,28 @@ class MLB(object):
                     {'year':''}
     '''
 
-    def __init__(self, args):
+    def __init__(self, args, feature_ids, yaml_path='./mlb_code_mapping.yaml'):
         self.games = ''
         self.teams = ''
         self.records = ''
+        self.code_map = {}
         self.args = args
+        self.feature_ids = feature_ids
+        self.yaml_path = yaml_path
+        self._load_yaml()
         if args['year'] != '':
             self.get_games()
             self.remove_preseason_games()
             self.get_teams()
             self.get_records()
+
+
+    def _load_yaml(self):
+        try:
+            code_map = open(self.yaml_path, 'r')
+            self.code_map = yaml.load(code_map)
+        except:
+            print "file not found"
 
 
     def get_games(self, args=None):
@@ -74,6 +86,29 @@ class MLB(object):
                     games2.pop(0)
                     break
         self.games = games2
+
+
+    def get_stats(game):
+        game_id = game.game_id
+        stats = mlb.team_stats(game_id)
+        home_bat = stats['home_batting']
+        away_bat = stats['away_batting']
+        home_bat_stats = [home_bat.ab, home_bat.rbi, home_bat.bb, home_bat.avg, home_bat.h - home_bat.d - home_bat.t, home_bat.d, home_bat.t, home_bat.da, home_bat.hr, home_bat.lob, home_bat.obp, home_bat.ops
+                          , home_bat.slg, home_bat.so]
+        away_bat_stats= [away_bat.ab, away_bat.rbi, away_bat.bb, away_bat.avg, away_bat.h - away_bat.d - away_bat.t, away_bat.d, away_bat.t, away_bat.da, away_bat.hr, away_bat.lob, away_bat.obp, away_bat.ops
+                          , away_bat.slg, away_bat.so]
+
+        home_pitch = stats['home_pitching']
+        away_pitch = stats['away_pitching']
+        home_pitch_stats = [home_pitch.bf, home_pitch.er, home_pitch.era]
+        away_pitch_stats = [away_pitch.bf, away_pitch.er, away_pitch.era]
+
+        for stat1, stat2 in zip(home_pitch_stats, away_pitch_stats):
+            home_bat_stats.append(stat1)
+            away_bat_stats.append(stat2)
+            
+        return home_bat_stats, away_bat_stats
+
 
 
     def get_records(self, season=None, teams=None, start=None, end=None):
