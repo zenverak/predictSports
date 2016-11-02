@@ -35,12 +35,15 @@ class MLB(object):
         self.games = ''
         self.teams = ''
         self.records = ''
-        self.codes = {}
+        self.code_map = {}
+        self.codes = []
         self.args = args
         self.feature_ids = feature_ids
         self.yaml_path = yaml_path
         self._load_yaml()
+        self.get_codes()
         if args['year'] != '':
+            
             self.get_games()
             self.remove_preseason_games()
             self.get_teams()
@@ -50,7 +53,7 @@ class MLB(object):
     def _load_yaml(self):
         try:
             code_map = open(self.yaml_path, 'r')
-            self.codes = yaml.load(code_map)
+            self.code_map = yaml.load(code_map)
         except:
             print "file not found"
 
@@ -67,6 +70,14 @@ class MLB(object):
             self.games = mlbgame.games(args['year'])
         elif args['year'] != '' and args['month'] != '':
             self.games = mlbgame.games(args['year'], args['month'])
+
+    def get_codes(self, feature_ids=None):
+        if feature_ids == None:
+            feature_ids = self.feature_ids
+        codes = []
+        for feature in feature_ids:
+            codes.append(code_map[feature])
+        self.codes = codes
         
         
     def remove_preseason_games(self, args=None ):
