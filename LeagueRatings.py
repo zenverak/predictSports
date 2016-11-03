@@ -31,13 +31,23 @@ class MLB(object):
                     {'year':''}
     '''
 
-    def __init__(self, args, feature_ids, yaml_path='./mlb_code_mapping.yaml'):
+    def __init__(self, args, feature_ids=None, weights=None, yaml_path='./mlb_code_mapping.yaml'):
         self.games = ''
         self.teams = ''
         self.records = ''
         self.code_map = {}
         self.codes = []
         self.args = args
+        self.default_feat = ['op', 'hp', 'ap', 'rf', 'ra', 'hrf', 'hra', 'arf', 'ara']
+        self.default_weights = np.array([1., 2., 3., 2., 2., 1.5, 2., 2., 1.5])
+        if feature_ids == None:
+            self.feature_ids = dc(self.default_feat)
+        else:
+            self.feature_ids = feature_ids
+        if weights == None:
+            self.weights = dc(self.default_weights)
+        else:
+            self.weights = weights
         self.feature_ids = feature_ids
         self.yaml_path = yaml_path
         self._load_yaml()
@@ -261,7 +271,7 @@ class NFL(object):
                 tog = turn over gained
         '''
     
-    def __init__(self, args, feature_ids, yaml_path='./nfl_code_mapping.yaml'):
+    def __init__(self, args, feature_ids=None, weights=None yaml_path='./nfl_code_mapping.yaml'):
         self.games = ''
         self.teams = ''
         self.records = ''
@@ -271,6 +281,16 @@ class NFL(object):
         self.weeks = args['week']
         self.year = args['year']
         self.yaml_path = yaml_path
+        self.default_feat = ['op', 'hp', 'ap', 'pf', 'pa', 'hpf', 'hpa', 'apf', 'apa']
+        self.default_weights = np.array([1., 2., 3., 2., 2., 1.5, 2., 2., 1.5])
+        if feature_ids == None:
+            self.feature_ids = dc(self.default_feat)
+        else:
+            self.feature_ids = feature_ids
+        if weights == None:
+            self.weights = dc(self.default_weights)
+        else:
+            self.weights = weights
         self.code_map = {}
         elf.get_teams()
         self._load_yaml()
