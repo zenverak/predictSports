@@ -120,7 +120,7 @@ aopsa:
 - pg
 ap:
 - 0
-- o
+- a
 - p
 - s
 ar:
@@ -385,7 +385,7 @@ hopsa:
 - pg
 hp:
 - 0
-- o
+- h
 - p
 - s
 hr:

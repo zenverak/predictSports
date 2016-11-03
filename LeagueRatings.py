@@ -183,16 +183,18 @@ class MLB(object):
                 else:
                     ht_record = [0, 1, home_team_runs, away_team_runs, home_team_hits, away_team_hits]
                     at_record = [2, 0, away_team_runs, home_team_runs, away_team_hits, home_team_hits]
+
+                
                     
 
-
-                home_other, away_other = self.get_stats(game)
-                for stat1, stat2 in zip(home_other, away_other):
-                    ht_record.append(stat1)
-                    at_record.append(stat2)
-                for stat1, stat2 in zip(home_other, away_other):
-                    ht_record.append(stat2)
-                    at_record.append(stat1)
+                if home_team_runs != away_team_runs:
+                    home_other, away_other = self.get_stats(game)
+                    for stat1, stat2 in zip(home_other, away_other):
+                        ht_record.append(stat1)
+                        at_record.append(stat2)
+                    for stat1, stat2 in zip(home_other, away_other):
+                        ht_record.append(stat2)
+                        at_record.append(stat1)
                 records[home_team].append(ht_record)
                 records[away_team].append(at_record)
         records = _remove_no_play(records)
@@ -616,7 +618,7 @@ class Rater(object):
         if adjusted_features == None:
             adjusted_features = dc(self.adjusted_features)
         split = []
-        for i in range(0,9):
+        for i in range(0,len(self.feature_ids)):
             new_features = {}
             for team in adjusted_features:
                 new_features[team] = adjusted_features[team][i]
